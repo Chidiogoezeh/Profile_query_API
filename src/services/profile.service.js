@@ -3,85 +3,78 @@ import * as profileModel from "../models/profile.model.js";
 import { generateUUID } from "../utils/uuid.util.js";
 
 export const createProfile = async (name) => {
-  // Check Idempotency
   const existing = await profileModel.findByName(name);
   if (existing) return { data: existing, isNew: false };
 
-  // Aggregate API calls
-  const [genderData, ageData, nationalData] = await Promise.all([
+  const [gender, age, nationality] = await Promise.all([
     externalService.fetchGenderData(name),
     externalService.fetchAgeData(name),
     externalService.fetchNationalData(name),
   ]);
 
-  const profileData = {
+  const data = {
     id: generateUUID(),
     name: name.toLowerCase(),
-    ...genderData,
-    ...ageData,
-    ...nationalData,
+    ...gender,
+    ...age,
+    ...nationality,
     created_at: new Date().toISOString(),
   };
 
-  await profileModel.save(profileData);
-  return { data: profileData, isNew: true };
+  await profileModel.save(data);
+  return { data, isNew: true };
 };
 
-export const getProfileById = async (id) => {
-  return await profileModel.findById(id);
-};
+export const getProfileById = (id) => profileModel.findById(id);
 
-export const listProfiles = async (filters) => {
-  return await profileModel.findAll(filters);
-};
+export const listProfiles = (filters) => profileModel.findAll(filters);
 
 export const searchProfiles = async (query, pagination) => {
-  const filters = { ...pagination };
   const q = query.toLowerCase();
+  const filters = { ...pagination };
   let interpreted = false;
 
-  // 1. Gender Detection (Handle "male and female" by prioritizing the last mentioned or specific logic)
-  if (q.includes("female")) { filters.gender = "female"; interpreted = true; }
-  if (q.includes("male") && !q.includes("female")) { filters.gender = "male"; interpreted = true; }
-
-  // 2. Age Group Mapping
-  if (q.includes("child")) { filters.age_group = "child"; interpreted = true; }
-  if (q.includes("teenager")) { filters.age_group = "teenager"; interpreted = true; }
-  if (q.includes("adult")) { filters.age_group = "adult"; interpreted = true; }
-  if (q.includes("senior")) { filters.age_group = "senior"; interpreted = true; }
-
-  // 3. "Young" Mapping (16-24) per Rule #2
-  if (q.includes("young")) {
-    filters.min_age = 16;
-    filters.max_age = 24;
+  const setFilter = (key, value) => {
+    filters[key] = value;
     interpreted = true;
+  };
+
+  if (q.includes("female")) setFilter("gender", "female");
+  else if (q.includes("male")) setFilter("gender", "male");
+
+  for (const group of ["child", "teenager", "adult", "senior"]) {
+    if (q.includes(group)) setFilter("age_group", group);
   }
 
-  // 4. "Above X" / "Below X" logic
-  const aboveMatch = q.match(/above (\d+)/);
-  if (aboveMatch) { filters.min_age = parseInt(aboveMatch[1]); interpreted = true; }
-  
-  const belowMatch = q.match(/below (\d+)/);
-  if (belowMatch) { filters.max_age = parseInt(belowMatch[1]); interpreted = true; }
+  if (q.includes("young")) {
+    setFilter("min_age", 16);
+    setFilter("max_age", 24);
+  }
 
-  // 5. Country Parsing (Mapping common names to ISO codes)
-  const countryMap = { "nigeria": "NG", "kenya": "KE", "angola": "AO", "benin": "BJ" };
-  for (const [name, id] of Object.entries(countryMap)) {
-    if (q.includes(name)) {
-      filters.country_id = id;
-      interpreted = true;
-    }
+  const above = q.match(/above (\d+)/);
+  if (above) setFilter("min_age", parseInt(above[1], 10));
+
+  const below = q.match(/below (\d+)/);
+  if (below) setFilter("max_age", parseInt(below[1], 10));
+
+  const countries = {
+    nigeria: "NG",
+    kenya: "KE",
+    angola: "AO",
+    benin: "BJ",
+  };
+
+  for (const [country, id] of Object.entries(countries)) {
+    if (q.includes(country)) setFilter("country_id", id);
   }
 
   if (!interpreted) {
     const error = new Error("Unable to interpret query");
-    error.status = 400; 
+    error.status = 400;
     throw error;
   }
 
-  return await profileModel.findAll(filters);
+  return profileModel.findAll(filters);
 };
 
-export const removeProfile = async (id) => {
-  return await profileModel.deleteById(id);
-};
+export const removeProfile = (id) => profileModel.deleteById(id);
