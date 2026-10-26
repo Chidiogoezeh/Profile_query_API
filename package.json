@@ -1,19 +1,30 @@
 {
-  "name": "profile-intelligence-service",
+  "name": "profile_query_API",
   "version": "1.0.0",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "dev:ts": "tsx watch server.ts",
+    "build": "tsc",
+    "start:dist": "node dist/server.js",
+    "seed:ts": "tsx scripts/seed.ts"
   },
   "dependencies": {
-    "axios": "^1.6.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "mysql2": "^3.6.2",
-    "uuid": "^13.0.0"
+    "axios": "^1.20.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^4.22.3",
+    "mysql2": "^3.24.6",
+    "uuid": "^14.0.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }
