@@ -1,39 +1,64 @@
+import type { RequestHandler } from "express";
 import { errorResponse } from "../utils/response.util.js";
 
-export const validateProfileInput = (req, res, next) => {
-  const { name } = req.body;
-
-  if (!name || name.trim() === "") {
-    return errorResponse(res, "Missing or empty parameter", 400);
-  }
+export const validateProfileInput: RequestHandler = (
+  req, res, next ) => { const { name } = req.body;
 
   if (typeof name !== "string") {
     return errorResponse(res, "Invalid parameter type", 422);
   }
 
+  if (name.trim() === "") {
+    return errorResponse(res, "Missing or empty parameter", 400);
+  }
+
   next();
 };
 
-export const validateQueryParams = (req, res, next) => {
-  const { 
-    min_age, max_age, page, limit, 
-    min_gender_probability, min_country_probability,
-    sort_by, order 
+export const validateQueryParams: RequestHandler = (
+  req, res, next ) => {
+  const {
+    min_age,
+    max_age,
+    page,
+    limit,
+    min_gender_probability,
+    min_country_probability,
   } = req.query;
-  
-  // Check for invalid types
-  const numericFields = { min_age, max_age, page, limit, min_gender_probability, min_country_probability };
-  for (const [key, val] of Object.entries(numericFields)) {
-    if (val !== undefined) {
-      if (val === "" || isNaN(val)) {
-        return res.status(422).json({ status: "error", message: "Invalid query parameters" });
-      }
+
+  const numericFields = {
+    min_age,
+    max_age,
+    page,
+    limit,
+    min_gender_probability,
+    min_country_probability,
+  };
+
+  for (const val of Object.values(numericFields)) {
+    if (
+      val !== undefined &&
+      (
+        typeof val !== "string" ||
+        val.trim() === "" ||
+        !Number.isFinite(Number(val))
+      )
+    ) {
+      return res.status(422).json({
+        status: "error",
+        message: "Invalid query parameters",
+      });
     }
   }
 
-  // Sorting and Pagination Bounds
-  if (limit && (parseInt(limit) > 50 || parseInt(limit) < 1)) {
-    return res.status(422).json({ status: "error", message: "Invalid query parameters" });
+  if (
+    limit !== undefined &&
+    (Number(limit) > 50 || Number(limit) < 1)
+  ) {
+    return res.status(422).json({
+      status: "error",
+      message: "Invalid query parameters",
+    });
   }
 
   next();
