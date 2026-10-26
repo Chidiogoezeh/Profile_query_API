@@ -29,13 +29,13 @@ export const findByName = async (
 
 export const findById = async (
   id: string,
-): Promise<ProfileRow | undefined> => {
+): Promise<ProfileRow | null> => {
   const [rows] = await pool.execute<ProfileRow[]>(
     "SELECT * FROM profiles WHERE id = ?",
     [id],
   );
 
-  return rows[0];
+  return rows[0] ?? null;
 };
 
 export const save = async (
