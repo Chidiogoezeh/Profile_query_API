@@ -1,4 +1,13 @@
-export const successResponse = (res, data, statusCode = 200, extra = {}) => {
+import type { Response } from "express";
+
+type ResponseExtra = Record<string, unknown>;
+
+export const successResponse = (
+  res: Response,
+  data: unknown,
+  statusCode: number = 200,
+  extra: ResponseExtra = {},
+) => {
   return res.status(statusCode).json({
     status: "success",
     ...extra,
@@ -6,7 +15,11 @@ export const successResponse = (res, data, statusCode = 200, extra = {}) => {
   });
 };
 
-export const errorResponse = (res, message, statusCode = 500) => {
+export const errorResponse = (
+  res: Response,
+  message: string,
+  statusCode: number = 500,
+) => {
   return res.status(statusCode).json({
     status: "error",
     message,
