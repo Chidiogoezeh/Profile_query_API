@@ -51,11 +51,12 @@ const seedDatabase = async () => {
     }
 
     console.log("Seeding completed successfully!");
-  } catch (error) {
-    console.error("Seeding failed:", error.message);
-  } finally {
-    await connection.end();
-    process.exit();
+  } catch (error: unknown) {
+    console.error(
+      "Seeding failed:",
+      error instanceof Error ? error.message : error
+    );
+    process.exitCode = 1;
   }
 };
 
