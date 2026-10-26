@@ -19,4 +19,17 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+pool.getConnection()
+  .then(async (connection) => {
+    const [rows] = await connection.query(
+      "SELECT DATABASE() AS database_name"
+    );
+
+    console.log("Connected to MySQL:", rows);
+    connection.release();
+  })
+  .catch((error: Error) => {
+    console.error("Database connection failed:", error.message);
+  });
+
 export default pool;
