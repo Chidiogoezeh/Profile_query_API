@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS profiles;
+USE profile_query;
 
 CREATE TABLE profiles (
     id CHAR(36) PRIMARY KEY,
