@@ -1,133 +1,268 @@
-Profile Intelligence Query Engine
-A real-time, high-performance RESTful application built with Node.js, Express, and MySQL. This service functions as an enrichment engine that takes a simple name and transforms it into a detailed demographic profile using multiple external intelligence APIs.
+# Profile Query API
 
-Context
-The Profile Intelligence Service is designed for systems requiring automated user profiling and data enrichment for Insighta Labs.
+A TypeScript REST API built with Node.js, Express, and MySQL for querying, filtering, and analyzing demographic profile data. Designed for sales, marketing, and research teams that need structured demographic data to support audience segmentation, market research, and customer insights.
 
-The Input: A simple user-provided name.
+## Features
 
-The Engine: Simultaneously queries Genderize, Agify, and Nationalize APIs to aggregate demographic data.
+- **Profile enrichment:** Aggregates demographic data from Genderize, Agify, and Nationalize APIs.
+- **Advanced filtering:** Combine gender, age, age group, country, and probability thresholds.
+- **Natural-language search:** Convert supported English queries into structured filters using rule-based parsing.
+- **Sorting and pagination:** Retrieve ordered results with configurable page sizes.
+- **Reliable persistence:** Store profiles in MySQL and prevent duplicate names.
+- **UUID v7:** Generate time-sortable identifiers for profile records.
+- **Validation and error handling:** Return consistent API errors and handle upstream service failures.
+- **CORS support:** Allow cross-origin API requests.
 
-The Result: A structured, persistent profile featuring gender probability, age classification, and country of origin.
+## Tech Stack
 
-Features
-Data Enrichment and Logic
-- Multi-API Aggregation: Integrated with three third-party services to fetch real-time intelligence.
+- **Language:** TypeScript
+- **Runtime:** Node.js
+- **Framework:** Express
+- **Database:** MySQL 8.0+
+- **Database driver:** mysql2
+- **External APIs:** Genderize, Agify, Nationalize
+- **Utilities:** Axios, UUID, dotenv, CORS
+- **Testing:** Postman
+- **Development tunneling:** ngrok
 
-- Age Classification: Automatic categorization into life stages: child (0-12), teenager (13-19), adult (20-59), or senior (60+).
+## Prerequisites
 
-- National Identity: Intelligent selection of the highest-probability country code from geographic data.
+- Node.js and npm
+- MySQL 8.0 or later
+- Git
+- An ngrok account for public local testing (optional)
 
-Persistence & Reliability
-- Idempotency Handling: If a name has already been processed, the system returns the existing record instead of re-calling external APIs.
+## Installation
 
-- UUID v7 Integration: Uses time-sortable Version 7 UUIDs for primary keys to ensure optimal database indexing.
+Clone the repository:
 
-- Data Integrity: Upstream validation triggers a 502 Bad Gateway error if external APIs return insufficient data.
+```bash
+git clone https://github.com/Chidiogoezeh/Profile_query_API.git
+cd Profile_query_API
+npm install
+```
 
-System Design
-- Advanced Filtering: Support for 7+ combined filters including probability thresholds and age ranges.
+Create a MySQL database:
 
-- Natural Language Query: Interpret plain English queries into structured database filters.
+```sql
+CREATE DATABASE profile_db;
+```
 
-- CORS Enabled: Configured with Access-Control-Allow-Origin: * for seamless integration.
+Configure the environment variables in a `.env` file at the project root:
 
-Tech Stack
-- Runtime: Node.js (ES6 Modules)
+```env
+PORT=3000
+DB_HOST=localhost
+DB_USER=your_user
+DB_PASSWORD=your_password
+DB_NAME=profile_db
+```
 
-- Framework: Express.js
+Apply the database schema:
 
-- Database: MySQL 8.0+
+```bash
+mysql -u your_user -p profile_db < schema.sql
+```
 
-- HTTP Client: Axios
+**Note:** The provided schema contains a `DROP TABLE IF EXISTS` statement. Run it only when creating a fresh database or when you have safely backed up existing data.
 
-- Utilities: uuid, dotenv, cors, mysql2
+## Database Seeding
 
-Installation & Setup
-Clone the repository
-    - git clone https://github.com/Chidiogoezeh/Task-2_Intelligence-query-engine.git
-    - cd profile-intelligence-service
+Place the supplied profile dataset in the location expected by the seed script. The dataset should contain the expected `profiles` array.
 
-Install dependencies
-    - npm install
+Run the seed command configured in `package.json`:
 
-Database Setup
-    - Run the provided schema.sql script in your MySQL instance to generate the profiles table.
+```bash
+npm run seed
+```
 
-Environment Variables
-Create a .env file:
+The seed process should populate the database with the 2,026 required profiles and avoid creating duplicate records when rerun.
 
-- Code snippet
-- PORT=3000
-- DB_HOST=localhost
-- DB_USER=your_user
-- DB_PASSWORD=your_password
-- DB_NAME=profile_db
+Verify the record count:
 
-Run the application
-    - npm run dev
+```sql
+SELECT COUNT(*) FROM profiles;
+```
 
-Natural Language Parsing Approach.
-Our system uses a Rule-Based Parsing Engine to convert plain English into structured SQL filters. This ensures deterministic results without the latency of an LLM.
+## Running the API
 
-Supported Keywords & Mappings
-- Gender: "males" or "females" maps to the gender filter.
+Start the development server using the configured development script:
 
-- Age Groups: "teenager", "adult", "senior" maps to the age_group column.
+```bash
+npm run dev
+```
 
-- "Young" Keyword: Strictly interpreted as ages 16–24 (Rule-based parsing).
+Build and run the production version using the scripts configured in `package.json`:
 
-- Comparison: "above [number]" maps to min_age.
+```bash
+npm run build
+npm start
+```
 
-- Location: Detects country names (e.g., "Nigeria", "Kenya") and maps them to ISO codes (NG, KE).
+The API is available at:
 
-Parsing Limitations
-The parser does not support complex negation (e.g., "not from Nigeria").
+`http://localhost:3000/api/profiles`
 
-Multiple conflicting age ranges in one string may result in the last detected range being applied.
+## API Endpoints
 
-If a query contains no recognizable keywords from our rules, it returns a 400 error: Unable to interpret query.
+### 1. Create a profile
 
-API Documentation
-1. Create Profile
-Endpoint: POST /api/profiles
+`POST /api/profiles`
 
-Payload: { "name": "ella" }
+Request body:
 
-Logic: Fetches data from external APIs and stores it.
+```json
+{
+  "name": "ella"
+}
+```
 
-2. Get All Profiles (Advanced Query)
-Endpoint: GET /api/profiles
+Retrieves demographic information from external APIs and stores the resulting profile. Existing profiles are returned without repeating enrichment requests.
 
-Filters: gender, age_group, country_id, min_age, max_age, min_gender_probability, min_country_probability
+### 2. Retrieve a profile
 
-Sorting: sort_by (age, created_at, gender_probability), order (asc, desc)
+`GET /api/profiles/:id`
 
-Pagination: page (default 1), limit (default 10, max 50)
+Returns a profile by its UUID.
 
-Example: /api/profiles?gender=male&country_id=NG&min_age=25&sort_by=age&order=desc
+### 3. Query profiles
 
-3. Natural Language Search
-Endpoint: GET /api/profiles/search
+`GET /api/profiles`
 
-Query Param: q (The English string)
+Supported query parameters:
 
-Example: /api/profiles/search?q=young males from nigeria
+| Parameter                 | Description                                  |
+| ------------------------- | -------------------------------------------- |
+| `gender`                  | `male` or `female`                           |
+| `age_group`               | `child`, `teenager`, `adult`, or `senior`    |
+| `country_id`              | Two-letter country code, such as `NG`        |
+| `min_age`                 | Minimum age                                  |
+| `max_age`                 | Maximum age                                  |
+| `min_gender_probability`  | Minimum gender confidence                    |
+| `min_country_probability` | Minimum country confidence                   |
+| `sort_by`                 | `age`, `created_at`, or `gender_probability` |
+| `order`                   | `asc` or `desc`                              |
+| `page`                    | Page number; default `1`                     |
+| `limit`                   | Results per page; default `10`, maximum `50` |
 
-4. Delete Profile
-Endpoint: DELETE /api/profiles/:id
+Example:
 
-Response: 204 No Content.
+```http
+GET /api/profiles?gender=male&country_id=NG&min_age=25&sort_by=age&order=desc&page=1&limit=10
+```
 
-Error Handling
-The service returns consistent error objects:
+Successful response:
 
-JSON
-{ "status": "error", "message": "<detailed message>" }
-400: Missing or empty parameter / Unable to interpret query.
+```json
+{
+  "status": "success",
+  "page": 1,
+  "limit": 10,
+  "total": 25,
+  "data": []
+}
+```
 
-422: Invalid parameter type (e.g., passing a string where a number is expected).
+The example `total` is illustrative; actual results depend on the database.
 
-404: Profile not found.
+### 4. Natural-language search
 
-502: Upstream API failure.
+`GET /api/profiles/search?q=young%20males%20from%20nigeria`
+
+The parser converts supported English expressions into database filters.
+
+| Query expression                     | Interpretation                                          |
+| ------------------------------------ | ------------------------------------------------------- |
+| `young males`                        | Male, ages 16–24                                        |
+| `females above 30`                   | Female, age 30 or older                                 |
+| `people from angola`                 | Country `AO`                                            |
+| `adult males from kenya`             | Male, adult, country `KE`                               |
+| `male and female teenagers above 17` | Teenager, age 17 or older, without a gender restriction |
+
+Pagination is also supported through `page` and `limit`.
+
+The parser uses predefined rules, not AI or an LLM. Supported country names depend on the country mappings implemented in the application.
+
+### 5. Delete a profile
+
+`DELETE /api/profiles/:id`
+
+Deletes the profile identified by its UUID.
+
+Successful response: `204 No Content`.
+
+## Error Responses
+
+Errors follow this structure:
+
+```json
+{
+  "status": "error",
+  "message": "Error description"
+}
+```
+
+| HTTP status | Meaning                                                  |
+| ----------- | -------------------------------------------------------- |
+| `400`       | Missing or empty parameter, or unrecognized search query |
+| `422`       | Invalid query parameter or parameter type                |
+| `404`       | Profile or route not found                               |
+| `500`       | Internal server error                                    |
+| `502`       | External demographic API failure                         |
+
+## Testing
+
+Use Postman to verify:
+
+- Profile creation, retrieval, and deletion
+- Combined filters and sorting
+- Pagination defaults and limits
+- Natural-language query mappings
+- Invalid inputs and error responses
+- Seed idempotency and database integrity
+- UUID v7 identifiers, UTC ISO 8601 timestamps, and CORS headers
+- External API failure handling
+
+Run the project's configured test and build scripts before deploying.
+
+## Local Testing with ngrok
+
+Start the API locally, then expose port 3000:
+
+```bash
+ngrok http 3000
+```
+
+Use the generated HTTPS URL to test the API from external clients. Keep environment variables and ngrok authentication credentials out of version control.
+
+## Project Structure
+
+```text
+src/
+  config/
+  controllers/
+  middleware/
+  models/
+  routes/
+  services/
+  types/
+  utils/
+scripts/
+schema.sql
+profiles.json
+server.ts
+package.json
+tsconfig.json
+README.md
+```
+
+## Intended Use Cases
+
+- **Sales teams:** Segment audiences by demographic attributes.
+- **Marketing teams:** Explore demographic patterns and refine audience targeting.
+- **Research teams:** Query structured profile datasets using multiple conditions.
+- **Product teams:** Investigate demographic distributions to support product research.
+
+## License
+
+MIT.
