@@ -21,14 +21,20 @@ export const fetchGenderData = async (name: string) => {
     `https://api.genderize.io?name=${encodeURIComponent(name)}`,
   );
 
-  if (!res.data.gender || res.data.count === 0) {
-    throw createExternalError("Genderize");
+  const { gender, probability, count } = res.data;
+
+  if (gender == null || count === 0) {
+    return {
+      gender: null,
+      gender_probability: null,
+      sample_size: count,
+    };
   }
 
   return {
-    gender: res.data.gender,
-    gender_probability: res.data.probability,
-    sample_size: res.data.count,
+    gender,
+    gender_probability: probability,
+    sample_size: count,
   };
 };
 
@@ -37,11 +43,15 @@ export const fetchAgeData = async (name: string) => {
     `https://api.agify.io?name=${encodeURIComponent(name)}`,
   );
 
-  if (res.data.age === null) {
-    throw createExternalError("Agify");
+  const age = res.data.age;
+
+  if (age === null) {
+    return {
+      age: null,
+      age_group: null,
+    };
   }
 
-  const age = res.data.age;
   let age_group: "child" | "teenager" | "adult" | "senior";
 
   if (age <= 12) age_group = "child";
