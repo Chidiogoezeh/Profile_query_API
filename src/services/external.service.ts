@@ -63,21 +63,37 @@ export const fetchAgeData = async (name: string) => {
 };
 
 export const fetchNationalData = async (name: string) => {
-  const res = await axios.get<NationalizeResponse>(
-    `https://api.nationalize.io?name=${encodeURIComponent(name)}`,
-  );
+  try {
+    const res = await axios.get<NationalizeResponse>(
+      `https://api.nationalize.io?name=${encodeURIComponent(name)}`,
+    );
 
-  if (!res.data.country || res.data.country.length === 0) {
-    throw createExternalError("Nationalize");
+    if (!res.data.country || res.data.country.length === 0) {
+      return {
+        country_id: null,
+        country_probability: null,
+      };
+    }
+
+    const topCountry = res.data.country.reduce(
+      (prev, curr) =>
+        prev.probability > curr.probability ? prev : curr,
+    );
+
+    return {
+      country_id: topCountry.country_id,
+      country_probability: topCountry.probability,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 429) {
+      console.warn("Nationalize.io rate limit reached; skipping nationality prediction.");
+
+      return {
+        country_id: null,
+        country_probability: null,
+      };
+    }
+
+    throw error;
   }
-
-  const topCountry = res.data.country.reduce(
-    (prev: NationalizeCountry, curr: NationalizeCountry) =>
-      prev.probability > curr.probability ? prev : curr,
-  );
-
-  return {
-    country_id: topCountry.country_id,
-    country_probability: topCountry.probability,
-  };
 };
